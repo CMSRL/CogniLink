@@ -1,4 +1,4 @@
-# CogniLink
+# CogniLink -An Open-Source System for Synchronizing Spatially-Anchored Information in Augmented Reality
 CogniLink is designed as a multi-platform system to share arbitrary, but spatially-synched, information. CogniLink exhanges spatial anchors between two or more AR devices (right now, full functionality is only for HoloLens 2 devices, but other devices are being added). An arbitray data object is exchanged and syncronized between the devices, which can be modified to fit the needs of the specific applications. 
 
 
