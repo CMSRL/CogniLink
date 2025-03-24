@@ -216,7 +216,7 @@ public class HoloLensSocketClient : MonoBehaviour
             {
                 if (GameObject.Find(target))
                 {
-                    //if target is not owned (i.e., the target is from a peer device), update it position
+                    //if target is not owned (i.e., the target is from a peer device), AND the target exists from a previous scene update, update its position
                     if (!GameObject.Find(target).GetComponent<TargetEntity>().isOwner)
                     {
                         var existingTarget = GameObject.Find(target);
@@ -232,10 +232,15 @@ public class HoloLensSocketClient : MonoBehaviour
                     newTarget.name = newScene[target].targetGUID;
                     newTarget.transform.parent = GameObject.Find("AnchorParent").transform;
                     newTarget.transform.localPosition = newScene[target].targetLocation;
+                    newTarget.transform.rotation = newScene[target].targetRotation;
                     //Debug.Log("Adding new target to sceneList");
                 }
             }
 
+        }
+        else
+        {
+            Debug.Log("Received Scene is Null");
         }
     }
 
@@ -393,7 +398,7 @@ public class HoloLensSocketClient : MonoBehaviour
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="client"></param>
+    /// <param name="tcpClient"></param>
     /// <returns></returns>
     public async static Task<byte[]> tryReceiveScene(StreamSocket tcpClient)
     {
@@ -450,9 +455,9 @@ public class HoloLensSocketClient : MonoBehaviour
         {
             foreach (var target in GameObject.FindGameObjectsWithTag("Target"))
             {
-                if (sceneList.ContainsKey(target.name))
+                if (target.GetComponent<TargetEntity>().isOwner == true)
                 {
-                    //Debug.Log("Update target position");
+                    //Update the existing target in sceneList with its most current location and roation before sending.
                     sceneList[target.name] = new TargetStruct(target.transform.localPosition, target.transform.rotation, target.name);
                 }
 

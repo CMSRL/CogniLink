@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using System.Threading.Tasks;
-
 using System;
 using System.Net;
 using static UnityEngine.GraphicsBuffer;
@@ -107,7 +106,7 @@ public class CogniLinkEditorWindow : EditorWindow
         {          
             for (int i = 1; i < Configuration.DeviceIPAddresses.Count; i++)
             {
-                //await SocketServer.AnchorSend(primarySpatialAnchor, Configuration.DeviceIPAddresses[i]);
+                await SocketServer.AnchorSend(primarySpatialAnchor, Configuration.DeviceIPAddresses[i]);
             }
         }
         while (!sceneSyncCancel)

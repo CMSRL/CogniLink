@@ -19,11 +19,11 @@ public class TargetEntity : MonoBehaviour
 
     public void TestInteractonSelect()
     {
-        Debug.Log("Gaze Select");
+       // Debug.Log("Gaze Select");
     }
 
     public void TestInteractonHover()
     {
-        Debug.Log("Gaze Hover");
+        ///Debug.Log("Gaze Hover");
     }
 }
