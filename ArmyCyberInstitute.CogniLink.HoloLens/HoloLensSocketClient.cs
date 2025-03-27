@@ -32,6 +32,7 @@ using UnityEngine.XR.ARSubsystems;
 using System.Collections.Specialized;
 
 
+
 #endif
 
 #if ENABLE_WINMD_SUPPORT
@@ -42,11 +43,9 @@ public class HoloLensSocketClient : MonoBehaviour
 {
 
     byte[] serializedAnchors = null;
-    //byte[] serializedAnchorFromSocket = null;
     bool anchorAdded = false;
     bool anchorSerialized = false;
-    bool anchorImported = false;
-    bool anchorReadyForImport = false;
+    //bool anchorReadyForImport = false;
     public GameObject prefabTarget;
     public SerializableDictionary<string, TargetStruct> sceneList = new SerializableDictionary<string, TargetStruct>();
 
@@ -220,43 +219,6 @@ public class HoloLensSocketClient : MonoBehaviour
     private async void Listener_Scene_Receive_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
     {
         var serializedScene = await tryReceiveScene(args.Socket);
-        var newScene = SerializationTools.DeserializeSceneStructFromStream(new MemoryStream(serializedScene));
-       //Debug.Log("Scene Received");
-
-        if (newScene != null)
-        {
-            foreach (var target in newScene.Keys)
-            {
-                if (GameObject.Find(target))
-                {
-                    //if target is not owned (i.e., the target is from a peer device), AND the target exists from a previous scene update, update its position
-                    if (!GameObject.Find(target).GetComponent<TargetEntity>().isOwner)
-                    {
-                        var existingTarget = GameObject.Find(target);
-                        existingTarget.transform.localPosition = newScene[target].targetLocation;
-                        existingTarget.transform.localRotation = newScene[target].targetRotation;
-                        existingTarget.transform.localScale = newScene[target].targetScale;
-                    }
-
-                }
-                //if the target is brand new and from a peer device, add to scene
-                else
-                {
-                    var parent = GameObject.Find("AnchorParent").transform;
-                    var newTarget = UnityEngine.Object.Instantiate(prefabTarget, newScene[target].targetLocation, newScene[target].targetRotation, parent);
-                    newTarget.name = newScene[target].targetGUID;
-                    newTarget.transform.localPosition = newScene[target].targetLocation;
-                    newTarget.transform.localRotation = newScene[target].targetRotation;
-                    newTarget.transform.localScale = newScene[target].targetScale;
-                    //Debug.Log("Adding new target to sceneList");
-                }
-            }
-
-        }
-        else
-        {
-            Debug.Log("Received Scene is Null");
-        }
     }
 
 
@@ -267,14 +229,6 @@ public class HoloLensSocketClient : MonoBehaviour
 
     async void Update()
     {
-//#if ENABLE_WINMD_SUPPORT
-       // if (anchorReadyForImport)
-       // {
-       //     anchorReadyForImport = false;
-        //    StartCoroutine(ImportSerializedAnchorCoroutine(serializedAnchorFromSocket));
-            
-       // }
-//#endif
 
     }
 
@@ -303,12 +257,10 @@ public class HoloLensSocketClient : MonoBehaviour
 
     IEnumerator ImportSerializedAnchorCoroutine(byte[] serializedRawAnchor)
     {
-        if (!anchorImported)
-        {
+
             Task anchorImportTask = tryImportLocalAnchor(serializedRawAnchor);
             yield return new WaitUntil(() => anchorImportTask.IsCompleted);
-            anchorReadyForImport = false;
-        }
+
 
     }
 #endif
@@ -490,10 +442,6 @@ public class HoloLensSocketClient : MonoBehaviour
             }
             UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd Spatial Anchor"); }, true);
 
-            //serializedAnchorFromSocket = new byte[size];
-            //serializedAnchorFromSocket = tempByteArray;
-
-            //anchorReadyForImport = true;
             return tempByteArray;
         }
         catch(Exception e)
@@ -559,11 +507,10 @@ public class HoloLensSocketClient : MonoBehaviour
             foreach (var name in newAnchorTransferBatch.AnchorNames) UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors after Import: " + name);  }, true);
             if (newAnchorTransferBatch != null)
             {
-                foreach (var name in newAnchorTransferBatch.AnchorNames)  UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors before LandR: " + name);  }, true);
+                //foreach (var name in newAnchorTransferBatch.AnchorNames)  UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors before LandR: " + name);  }, true);
                 newAnchorTransferBatch.LoadAndReplaceAnchor(newAnchorTransferBatch.AnchorNames[0], GameObject.Find("AnchorParent").GetComponent<ARAnchor>().trackableId);
-                foreach (var name in newAnchorTransferBatch.AnchorNames)  UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors afer LandR: " + name);  }, true);
+                //foreach (var name in newAnchorTransferBatch.AnchorNames)  UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors afer LandR: " + name);  }, true);
                 UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Host Anchor Imported to Local System");  }, true);
-                anchorImported = true;
                 return true;
 
             }
@@ -591,46 +538,114 @@ public class HoloLensSocketClient : MonoBehaviour
     /// </summary>
     /// <param name="tcpClient"></param>
     /// <returns></returns>
-    public async static Task<byte[]> tryReceiveScene(StreamSocket tcpClient)
+    public async Task<bool> tryReceiveScene(StreamSocket tcpClient)
     {
+
+        // Buffer to store the response bytes.
+        int bytesRead = 0;
+        int totalBytes = 0;
+        int bufferSize = 32768;
+        double progress = 0;
+        int counter = 0;
+        byte[] tempByteArray = null;
+        int size = 0;
 
         try
         {
-            // Receive the spatial anchor(s) data
             using (var stream = tcpClient.InputStream.AsStreamForRead())
             {
-                Debug.Log($"Opening Stream");
+
                 // read size
                 byte[] sizeBytes = new byte[sizeof(int)];
                 await stream.ReadAsync(sizeBytes, 0, sizeof(int));
                 await stream.FlushAsync();
-                int size = BitConverter.ToInt32(sizeBytes, 0);
-                Debug.Log($"Attempting to download Anchor of size {size}");
+                size = BitConverter.ToInt32(sizeBytes, 0);
+                //UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Attempting to download Scene of size {size}"); }, true);
 
-                // read data
-                Debug.Log("reading...");
-                byte[] buffer = new byte[size];
-                await stream.ReadAsync(buffer, 0, size);
-                await stream.FlushAsync();
-                Debug.Log("finished reading");
 
-                using (Stream inputStream = tcpClient.OutputStream.AsStreamForWrite())
+                byte[] myReadBuffer = new byte[size];
+                tempByteArray = new byte[size];
+
+                // Incoming message may be larger than the buffer size.
+                do
                 {
-                    // Send complete confirmation
-                    Debug.Log("Sending confirmation");
-                    inputStream.WriteByte(1);
-                    await inputStream.FlushAsync();
-                    Debug.Log("Confirmation sent");
-                }
+                    if (bufferSize > (size - totalBytes))
+                    {
+                        bufferSize = size - totalBytes;
+                    }
+                    bytesRead = await stream.ReadAsync(myReadBuffer, 0, bufferSize);
+                    Array.Copy(myReadBuffer, 0, tempByteArray, totalBytes, bytesRead);
+                    totalBytes += bytesRead;
+                    counter += 1;
+                    if (counter == 120)
+                    {
+                        progress = (Convert.ToDouble(totalBytes) / Convert.ToDouble(size)) * 100;
+                       // UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd " + progress + "% of Scene"); }, true);
+                        counter = 0;
+                    }
 
-
-                return buffer;
+                } while (totalBytes < size);
 
             }
+
+            using (Stream outputStream = tcpClient.OutputStream.AsStreamForWrite())
+            {
+                // Send complete confirmation
+                Debug.Log("Sending confirmation");
+                outputStream.WriteByte(1);
+                await outputStream.FlushAsync();
+                Debug.Log("Confirmation sent");
+            }
+            //UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd Scene"); }, true);
+
+            var newScene = SerializationTools.DeserializeSceneStructFromStream(new MemoryStream(tempByteArray));
+            //Debug.Log("Scene Received");
+
+            if (newScene != null)
+            {
+                foreach (var target in newScene.Keys)
+                {
+
+                    if (GameObject.Find(target))
+                    {
+                        //if target is not owned (i.e., the target is from a peer device), AND the target exists from a previous scene update, update its position
+                        if (!GameObject.Find(target).GetComponent<TargetEntity>().isOwner)
+                        {
+                            var existingTarget = GameObject.Find(target);
+                            existingTarget.transform.localPosition = newScene[target].targetLocation;
+                            existingTarget.transform.localRotation = newScene[target].targetRotation;
+                            existingTarget.transform.localScale = newScene[target].targetScale;
+                        }
+
+                    }
+                    //if the target is brand new and from a peer device, add to scene
+                    else
+                    {
+                        var parent = GameObject.Find("AnchorParent").transform;
+                        var newTarget = UnityEngine.Object.Instantiate(prefabTarget, newScene[target].targetLocation, newScene[target].targetRotation, parent);
+                        newTarget.name = newScene[target].targetGUID;
+                        newTarget.transform.localPosition = newScene[target].targetLocation;
+                        newTarget.transform.localRotation = newScene[target].targetRotation;
+                        newTarget.transform.localScale = newScene[target].targetScale;
+                        //Debug.Log("Adding new target to sceneList");
+                    }
+
+
+                }
+
+            }
+            else
+            {
+                Debug.Log("Received Scene is Null");
+            }
+
+            return true;
+        
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            return null;
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log(e.Message); }, true);
+            return false;
         }
     }
 

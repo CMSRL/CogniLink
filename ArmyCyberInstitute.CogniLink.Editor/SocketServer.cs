@@ -253,39 +253,66 @@ public class SocketServer
     public async static Task<byte[]> ReceiveSerializedSceneAsync(TcpClient tcpClient)
     {
 
+        // Buffer to store the response bytes.
+        int bytesRead = 0;
+        int totalBytes = 0;
+        int bufferSize = 32768;
+        double progress = 0;
+        int counter = 0;
+        byte[] tempByteArray = null;
+        int size = 0;
+
         try
         {
-            // Receive the spatial anchor(s) data
             using (var stream = tcpClient.GetStream())
             {
-                //Debug.Log($"Opening Stream");
+
                 // read size
                 byte[] sizeBytes = new byte[sizeof(int)];
                 await stream.ReadAsync(sizeBytes, 0, sizeof(int));
                 await stream.FlushAsync();
-                int size = BitConverter.ToInt32(sizeBytes, 0);
-                //Debug.Log($"Attempting to download Scene of size {size}");
+                size = BitConverter.ToInt32(sizeBytes, 0);
+                //UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Attempting to download Scene of size {size}"); }, true);
 
-                // read data
-                //Debug.Log("reading...");
-                byte[] buffer = new byte[size];
-                await stream.ReadAsync(buffer, 0, size);
-                await stream.FlushAsync();
-               // Debug.Log("finished reading Scene");
+
+                byte[] myReadBuffer = new byte[size];
+                tempByteArray = new byte[size];
+
+                // Incoming message may be larger than the buffer size.
+                do
+                {
+                    if (bufferSize > (size - totalBytes))
+                    {
+                        bufferSize = size - totalBytes;
+                    }
+                    bytesRead = await stream.ReadAsync(myReadBuffer, 0, bufferSize);
+                    Array.Copy(myReadBuffer, 0, tempByteArray, totalBytes, bytesRead);
+                    totalBytes += bytesRead;
+                    counter += 1;
+                    if (counter == 120)
+                    {
+                        progress = (Convert.ToDouble(totalBytes) / Convert.ToDouble(size)) * 100;
+                        //UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd " + progress + "% of Scene"); }, true);
+                        counter = 0;
+                    }
+
+                } while (totalBytes < size);
 
                 // Send complete confirmation
-                //Debug.Log("Sending confirmation");
+                Debug.Log("Sending confirmation");
                 stream.WriteByte(1);
                 await stream.FlushAsync();
-                //Debug.Log("Scene Receive Confirmation sent");
-               
-                return buffer;
+                Debug.Log("Confirmation sent");
 
             }
+
+            //UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd Scene"); }, true);
+
+            return tempByteArray;
         }
         catch (Exception e)
         {
-            Debug.Log(e.Message);
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log(e.Message); }, true);
             return null;
         }
     }
