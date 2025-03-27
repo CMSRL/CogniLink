@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using System;
 using System.Net;
 using static UnityEngine.GraphicsBuffer;
+using System.Linq;
+
 
 #if UNITY_EDITOR
 public class CogniLinkEditorWindow : EditorWindow
@@ -100,7 +102,11 @@ public class CogniLinkEditorWindow : EditorWindow
         sceneSyncCancel = false;
         //receive "primary" anchor from first device in device list
         primarySpatialAnchor = await SocketServer.AnchorReceive(Configuration.DeviceIPAddresses[0]);
-        
+
+        byte checksum = ComputeAdditionChecksum(primarySpatialAnchor);
+        int checksumInt = checksum;
+        Debug.Log($"Anchor Checksum: {checksumInt}");
+
         //send primary anchor to all devices
         if (Configuration.DeviceIPAddresses.Count > 1)
         {          
@@ -123,12 +129,17 @@ public class CogniLinkEditorWindow : EditorWindow
                         {
                             var existingTarget = GameObject.Find(target);
                             //Debug.Log(newScene[target.name].targetLocation);
-                            existingTarget.transform.position = newScene[target].targetLocation;
-                            existingTarget.transform.rotation = newScene[target].targetRotation;
+                            existingTarget.transform.localPosition = newScene[target].targetLocation;
+                            existingTarget.transform.localRotation = newScene[target].targetRotation;
+                            existingTarget.transform.localScale = newScene[target].targetScale;
                         }
                         else
                         {
-                            var newTarget = UnityEngine.Object.Instantiate(Configuration.targetPrefab, newScene[target].targetLocation, newScene[target].targetRotation);
+                            var parent = GameObject.Find("AnchorParent").transform;
+                            var newTarget = UnityEngine.Object.Instantiate(Configuration.targetPrefab, newScene[target].targetLocation, newScene[target].targetRotation, parent);
+                            newTarget.transform.localPosition = newScene[target].targetLocation;
+                            newTarget.transform.localRotation = newScene[target].targetRotation;
+                            newTarget.transform.localScale = newScene[target].targetScale;
                             newTarget.name = newScene[target].targetGUID;
                             Debug.Log("Adding new target to sceneList");
                         }
@@ -143,7 +154,7 @@ public class CogniLinkEditorWindow : EditorWindow
             //sync currentScene after updates from all devices
             foreach (GameObject target in gameObjects)
             {
-                currentScene.Add(target.name, new TargetStruct(target.transform.position, target.transform.rotation, target.name));
+                currentScene.Add(target.name, new TargetStruct(target.transform.localPosition, target.transform.localRotation, target.transform.localScale, target.name));
             }
 
             //send current scene to devices
@@ -179,6 +190,11 @@ public class CogniLinkEditorWindow : EditorWindow
 
     }
 
+    public static byte ComputeAdditionChecksum(byte[] data)
+    {
+        long longSum = data.Sum(x => (long)x);
+        return unchecked((byte)longSum);
+    }
 
     private void ShowDeviceConfiguration()
     {

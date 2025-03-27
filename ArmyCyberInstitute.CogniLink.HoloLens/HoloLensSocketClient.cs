@@ -17,6 +17,7 @@ using Windows.Perception.Spatial;
 using Windows.Storage;
 using Windows.System;
 using Windows.Storage.Streams;
+using Microsoft.MixedReality.OpenXR.ARFoundation;
 using Microsoft.MixedReality.OpenXR;
 using Windows.Perception.Spatial.Preview;
 using Windows.Foundation;
@@ -29,6 +30,8 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 using System.Collections.Specialized;
+
+
 #endif
 
 #if ENABLE_WINMD_SUPPORT
@@ -39,25 +42,31 @@ public class HoloLensSocketClient : MonoBehaviour
 {
 
     byte[] serializedAnchors = null;
+    //byte[] serializedAnchorFromSocket = null;
+    bool anchorAdded = false;
+    bool anchorSerialized = false;
+    bool anchorImported = false;
+    bool anchorReadyForImport = false;
     public GameObject prefabTarget;
+    public SerializableDictionary<string, TargetStruct> sceneList = new SerializableDictionary<string, TargetStruct>();
+
 #if ENABLE_WINMD_SUPPORT
     StreamSocketListener anchorSendListener = new StreamSocketListener();
     StreamSocketListener sceneSendListener = new StreamSocketListener();
     StreamSocketListener sceneReceiveListener = new StreamSocketListener();
     StreamSocketListener anchorReceiveListener = new StreamSocketListener();
+    XRAnchorTransferBatch myAnchorTransferBatch = new XRAnchorTransferBatch();
 
 #endif
 
-    SerializableDictionary<string, TargetStruct> sceneList = new SerializableDictionary<string, TargetStruct>();
+
     // Use this for initialization
     async void Start()
     {
-#if ENABLE_WINMD_SUPPORT
-        while (serializedAnchors == null)
-        {
-            serializedAnchors = await SpatialAnchors.tryAddLocalAnchor();
-        }
-#endif
+        #if ENABLE_WINMD_SUPPORT
+
+        StartCoroutine(CreateSerializedAnchorCoroutine());
+        #endif
 
 
 #if ENABLE_WINMD_SUPPORT
@@ -79,12 +88,12 @@ public class HoloLensSocketClient : MonoBehaviour
         await Anchor_Receive_Listener_Start();
 
 #endif
-        var newObject = Instantiate(prefabTarget);
-        newObject.name = GetLocalIPAddress() + " - Target1";
-        newObject.GetComponent<TargetEntity>().isOwner = true;
-        newObject.transform.parent = GameObject.Find("AnchorParent").transform;
-        newObject.GetComponent<Renderer>().material.color = new Color(0, 255, 0);
-        sceneList[newObject.name] = new TargetStruct(newObject.transform.localPosition, newObject.transform.rotation, newObject.name);
+        //var newObject = Instantiate(prefabTarget);
+        //newObject.name = GetLocalIPAddress() + " - Target1";
+        //newObject.GetComponent<TargetEntity>().isOwner = true;
+        //newObject.transform.parent = GameObject.Find("AnchorParent").transform;
+        //newObject.GetComponent<Renderer>().material.color = new Color(0, 255, 0);
+        //sceneList[newObject.name] = new TargetStruct(newObject.transform.localPosition, newObject.transform.rotation, newObject.name);
     }
 
 #if ENABLE_WINMD_SUPPORT
@@ -165,13 +174,13 @@ public class HoloLensSocketClient : MonoBehaviour
     /// <param name="args"></param>
     private async void Listener_Anchor_Send_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
     {
-        //var spatialAnchor = SpatialAnchors.CreateWorldSpatialAnchor();
-        ////Dictionary<string, SpatialAnchor> anchorDict = new Dictionary<string, SpatialAnchor>();
-        //anchorDict.Add("Test", spatialAnchor);
-        //var serializedAnchor = await SpatialAnchors.SerializeSpatialAnchors(anchorDict);
-        await trysendAnchor(serializedAnchors, args.Socket);
-        Debug.Log("Anchor Sent");
 
+        await trysendAnchor(serializedAnchors, args.Socket);
+        byte checksum = ComputeAdditionChecksum(serializedAnchors);
+        int checksumInt = checksum;
+        
+        UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Anchor of size {serializedAnchors.Length} Sent"); }, true);
+        UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Checksum: {checksumInt}"); }, true);
     }
 
     /// <summary>
@@ -182,9 +191,13 @@ public class HoloLensSocketClient : MonoBehaviour
     private async void Listener_Anchor_Receive_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
     {
         //Receive anchor from primary anchor device
-        var serializedAnchor = await tryReceiveAnchor(args.Socket);
-        await tryImportAnchor(serializedAnchor);
+        var serializedAnchorFromSocket = await attemptReceiveSpatialAnchor(args.Socket);
 
+        byte checksum = ComputeAdditionChecksum(serializedAnchorFromSocket);
+        int checksumInt = checksum;
+        UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Checksum: {checksumInt}"); }, true);
+        
+        StartCoroutine(ImportSerializedAnchorCoroutine(serializedAnchorFromSocket));
     }
 
     /// <summary>
@@ -221,18 +234,20 @@ public class HoloLensSocketClient : MonoBehaviour
                     {
                         var existingTarget = GameObject.Find(target);
                         existingTarget.transform.localPosition = newScene[target].targetLocation;
-                        existingTarget.transform.rotation = newScene[target].targetRotation;
+                        existingTarget.transform.localRotation = newScene[target].targetRotation;
+                        existingTarget.transform.localScale = newScene[target].targetScale;
                     }
 
                 }
                 //if the target is brand new and from a peer device, add to scene
                 else
                 {
-                    var newTarget = UnityEngine.Object.Instantiate(prefabTarget, newScene[target].targetLocation, newScene[target].targetRotation);
+                    var parent = GameObject.Find("AnchorParent").transform;
+                    var newTarget = UnityEngine.Object.Instantiate(prefabTarget, newScene[target].targetLocation, newScene[target].targetRotation, parent);
                     newTarget.name = newScene[target].targetGUID;
-                    newTarget.transform.parent = GameObject.Find("AnchorParent").transform;
                     newTarget.transform.localPosition = newScene[target].targetLocation;
-                    newTarget.transform.rotation = newScene[target].targetRotation;
+                    newTarget.transform.localRotation = newScene[target].targetRotation;
+                    newTarget.transform.localScale = newScene[target].targetScale;
                     //Debug.Log("Adding new target to sceneList");
                 }
             }
@@ -252,9 +267,51 @@ public class HoloLensSocketClient : MonoBehaviour
 
     async void Update()
     {
-
+//#if ENABLE_WINMD_SUPPORT
+       // if (anchorReadyForImport)
+       // {
+       //     anchorReadyForImport = false;
+        //    StartCoroutine(ImportSerializedAnchorCoroutine(serializedAnchorFromSocket));
+            
+       // }
+//#endif
 
     }
+
+#if ENABLE_WINMD_SUPPORT
+    IEnumerator CreateSerializedAnchorCoroutine()
+    {
+
+
+        while (!anchorSerialized)
+        {
+            if (!anchorAdded)
+            {
+                Task addAnchorTask = tryAddLocalAnchor();
+                yield return new WaitUntil(() => addAnchorTask.IsCompleted);
+
+            }
+            if (!anchorSerialized && anchorAdded)
+            {
+                Task addAnchorBatchTask = tryAddAnchorToBatch();
+                yield return new WaitUntil(() => addAnchorBatchTask.IsCompleted);
+            }
+
+        }
+
+    }
+
+    IEnumerator ImportSerializedAnchorCoroutine(byte[] serializedRawAnchor)
+    {
+        if (!anchorImported)
+        {
+            Task anchorImportTask = tryImportLocalAnchor(serializedRawAnchor);
+            yield return new WaitUntil(() => anchorImportTask.IsCompleted);
+            anchorReadyForImport = false;
+        }
+
+    }
+#endif
 
     public string GetLocalIPAddress()
     {
@@ -324,7 +381,7 @@ public class HoloLensSocketClient : MonoBehaviour
     /// </summary>
     /// <param name="client"></param>
     /// <returns></returns>
-    public async static Task<byte[]> tryReceiveAnchor(StreamSocket tcpClient)
+    public async Task<byte[]> tryReceiveAnchor(StreamSocket tcpClient)
     {
 
         try
@@ -338,21 +395,22 @@ public class HoloLensSocketClient : MonoBehaviour
                 await stream.ReadAsync(sizeBytes, 0, sizeof(int));
                 await stream.FlushAsync();
                 int size = BitConverter.ToInt32(sizeBytes, 0);
-                Debug.Log($"Attempting to download Anchor of size {size}");
+                UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Attempting to download Anchor of size {size}"); }, true);
+                
 
                 // read data
                 Debug.Log("reading...");
                 byte[] buffer = new byte[size];
-                await stream.ReadAsync(buffer, 0, size);
+                var finished = await stream.ReadAsync(buffer, 0, size);
                 await stream.FlushAsync();
-                Debug.Log("finished reading");
+  
 
-                using (Stream inputStream = tcpClient.OutputStream.AsStreamForWrite())
+                using (Stream outputStream = tcpClient.OutputStream.AsStreamForWrite())
                 {
                     // Send complete confirmation
                     Debug.Log("Sending confirmation");
-                    inputStream.WriteByte(1);
-                    await inputStream.FlushAsync();
+                    outputStream.WriteByte(1);
+                    await outputStream.FlushAsync();
                     Debug.Log("Confirmation sent");
                 }
 
@@ -367,31 +425,164 @@ public class HoloLensSocketClient : MonoBehaviour
         }
     }
 
-    async Task<bool> tryImportAnchor(byte[] serializedAnchor)
+    public static byte ComputeAdditionChecksum(byte[] data)
     {
-        //UnityEngine.WSA.Application.InvokeOnAppThread(async () =>
-        //{
-        //}, true);
+        long longSum = data.Sum(x => (long)x);
+        return unchecked((byte)longSum);
+    }
+
+    private async Task<byte[]> attemptReceiveSpatialAnchor(StreamSocket tcpClient)
+    {
+        // Buffer to store the response bytes.
+        int bytesRead = 0;
+        int totalBytes = 0;
+        int bufferSize = 32768;
+        double progress = 0;
+        int counter = 0;
+        byte[] tempByteArray = null;
+        int size = 0;
 
         try
         {
-
-            var importSuccess = await SpatialAnchors.tryImportLocalAnchor(serializedAnchor);
-            while (!importSuccess)
+            using (var stream = tcpClient.InputStream.AsStreamForRead())
             {
-                importSuccess = await SpatialAnchors.tryImportLocalAnchor(serializedAnchor);
-            }
-            Debug.Log("Anchor Received and Loaded");
-            return true;
 
+                // read size
+                byte[] sizeBytes = new byte[sizeof(int)];
+                await stream.ReadAsync(sizeBytes, 0, sizeof(int));
+                await stream.FlushAsync();
+                size = BitConverter.ToInt32(sizeBytes, 0);
+                UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Attempting to download Anchor of size {size}"); }, true);
+
+
+                byte[] myReadBuffer = new byte[size];
+                tempByteArray = new byte[size];
+
+                // Incoming message may be larger than the buffer size.
+                do
+                {
+                    if (bufferSize > (size - totalBytes))
+                    {
+                        bufferSize = size - totalBytes;
+                    }
+                    bytesRead = await stream.ReadAsync(myReadBuffer, 0, bufferSize);
+                    Array.Copy(myReadBuffer, 0, tempByteArray, totalBytes, bytesRead);
+                    totalBytes += bytesRead;
+                    counter += 1;
+                    if (counter == 120)
+                    {
+                        progress = (Convert.ToDouble(totalBytes) / Convert.ToDouble(size)) * 100;
+                        UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd " + progress + "% of Spatial Anchor"); }, true);
+                        counter = 0;
+                    }
+
+                } while (totalBytes < size);
+
+            }
+
+            using (Stream outputStream = tcpClient.OutputStream.AsStreamForWrite())
+            {
+                // Send complete confirmation
+                Debug.Log("Sending confirmation");
+                outputStream.WriteByte(1);
+                await outputStream.FlushAsync();
+                Debug.Log("Confirmation sent");
+            }
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd Spatial Anchor"); }, true);
+
+            //serializedAnchorFromSocket = new byte[size];
+            //serializedAnchorFromSocket = tempByteArray;
+
+            //anchorReadyForImport = true;
+            return tempByteArray;
+        }
+        catch(Exception e)
+        {
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log(e.Message); }, true);
+            return null;
+        }
+
+
+
+
+    }
+
+    private async Task<bool> tryAddAnchorToBatch()
+    {
+
+        //Debug.Log("Creating Export Anchor Batch in Socket Stream");
+        try
+        {
+
+            Debug.Log($"Attempting to export anchor: {myAnchorTransferBatch.AnchorNames[0]}");
+            MemoryStream memoryStream = (MemoryStream)await XRAnchorTransferBatch.ExportAsync(myAnchorTransferBatch);
+            serializedAnchors = memoryStream.ToArray();
+            Debug.Log($"Created Anchor Batch of size: {serializedAnchors.Length}");
+            anchorSerialized = true;
+            return true;
         }
         catch (Exception e)
         {
-            Debug.Log("Anchor import failed");
-            Debug.Log(e.Message);
             return false;
-            throw;
         }
+
+    }
+
+
+    private async Task<bool> tryAddLocalAnchor()
+    {
+        
+        //Debug.Log("Creating Export Anchor Batch in Socket Stream");
+        try
+        {
+            TrackableId myTrackableId = GameObject.Find("AnchorParent").GetComponent<ARAnchor>().trackableId;
+            //Debug.Log(myTrackableId);
+            anchorAdded = myAnchorTransferBatch.AddAnchor(myTrackableId, GetLocalIPAddress());
+            //Debug.Log($"Added anchor: {anchorAdded}");
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+
+    }
+
+    private async Task<bool> tryImportLocalAnchor(byte[] serializedAnchor)
+    {
+        if (serializedAnchor != null)
+        {
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Attempting to import anchor of size: {serializedAnchor.Length}"); }, true);
+
+            XRAnchorTransferBatch newAnchorTransferBatch = await XRAnchorTransferBatch.ImportAsync(new MemoryStream(serializedAnchor));
+            foreach (var name in newAnchorTransferBatch.AnchorNames) UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors after Import: " + name);  }, true);
+            if (newAnchorTransferBatch != null)
+            {
+                foreach (var name in newAnchorTransferBatch.AnchorNames)  UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors before LandR: " + name);  }, true);
+                newAnchorTransferBatch.LoadAndReplaceAnchor(newAnchorTransferBatch.AnchorNames[0], GameObject.Find("AnchorParent").GetComponent<ARAnchor>().trackableId);
+                foreach (var name in newAnchorTransferBatch.AnchorNames)  UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Anchors afer LandR: " + name);  }, true);
+                UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Host Anchor Imported to Local System");  }, true);
+                anchorImported = true;
+                return true;
+
+            }
+            else
+            {
+            
+                Debug.Log("Host anchor was null");
+                return false;
+            }
+
+
+
+        }
+        else
+        {
+            Debug.Log("Anchor receive request received, but anchor was null");
+            return false;
+        }
+
 
     }
 
@@ -453,15 +644,19 @@ public class HoloLensSocketClient : MonoBehaviour
     {
         try 
         {
-            foreach (var target in GameObject.FindGameObjectsWithTag("Target"))
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () =>
             {
-                if (target.GetComponent<TargetEntity>().isOwner == true)
+                foreach (var target in GameObject.FindGameObjectsWithTag("Target"))
                 {
-                    //Update the existing target in sceneList with its most current location and roation before sending.
-                    sceneList[target.name] = new TargetStruct(target.transform.localPosition, target.transform.rotation, target.name);
-                }
+                    if (target.GetComponent<TargetEntity>().isOwner == true)
+                    {
+                        //Update the existing target in sceneList with its most current location and roation before sending.
+                        sceneList[target.name] = new TargetStruct(target.transform.localPosition, target.transform.localRotation, target.transform.localScale, target.name);
+                    }
 
-            }
+                }
+            }, true);
+ 
 
             
 
@@ -516,6 +711,8 @@ public class HoloLensSocketClient : MonoBehaviour
         }
 
     }
+
+
 #endif
 
 

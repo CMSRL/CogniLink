@@ -74,11 +74,11 @@ public class MagicLeapSocketClient : MonoBehaviour
                 if (sceneList.ContainsKey(target.name))
                 {
                     //Debug.Log("Update target position");
-                    sceneList[target.name] = new TargetStruct(target.transform.position, target.transform.rotation, target.name);
+                    sceneList[target.name] = new TargetStruct(target.transform.localPosition, target.transform.localRotation, target.transform.localScale, target.name);
                 }
                 else
                 {
-                    sceneList.Add(target.name, new TargetStruct(target.transform.position, target.transform.rotation, target.name));
+                    sceneList.Add(target.name, new TargetStruct(target.transform.localPosition, target.transform.localRotation, target.transform.localScale, target.name));
                     Debug.Log("Adding new target to sceneList");
                 }
 

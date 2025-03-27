@@ -16,13 +16,17 @@ public struct TargetStruct
    // [XmlElement(ElementName = "TargetRotation")]
     public Quaternion targetRotation { get; set; }
 
-   // [XmlElement(ElementName = "TargetGUID")]
+    // [XmlElement(ElementName = "TargetScale")]
+    public Vector3 targetScale { get; set; }
+
+    // [XmlElement(ElementName = "TargetGUID")]
     public string targetGUID { get; set; }
 
-    public TargetStruct(Vector3 position, Quaternion rotation, String name)
+    public TargetStruct(Vector3 position, Quaternion rotation, Vector3 scale, String name)
     {
         targetLocation = position;
         targetRotation = rotation;
+        targetScale = scale;
         targetGUID = name;
     }
 }

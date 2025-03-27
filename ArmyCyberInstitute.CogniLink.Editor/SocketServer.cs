@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
+
 public class SocketServer
 {
 
@@ -68,8 +69,7 @@ public class SocketServer
 
                 // Send data
                 UnityEngine.Debug.Log("Sending anchors (from device)");
-                await stream.WriteAsync(serializedAnchors);
-                await stream.FlushAsync();
+                await Task.WhenAll(stream.WriteAsync(serializedAnchors, 0, serializedAnchors.Length), stream.FlushAsync());
                 UnityEngine.Debug.Log("Anchors sent");
 
                 // Wait for confirmation from server
@@ -175,7 +175,7 @@ public class SocketServer
         }
         catch (Exception e)
         {
-            Debug.Log("Anchor transfer failed");
+            Debug.Log("Scene transfer failed");
             Debug.Log(e.Message);
             return false;
             throw;
@@ -186,25 +186,50 @@ public class SocketServer
     public async static Task<byte[]> ReceiveSerializedSpatialAnchorsAsync(TcpClient tcpClient)
     {
 
+        // Buffer to store the response bytes.
+        int bytesRead = 0;
+        int totalBytes = 0;
+        int bufferSize = 32768;
+        double progress = 0;
+        int counter = 0;
+        byte[] tempByteArray = null;
+        int size = 0;
+
         try
         {
-            // Receive the spatial anchor(s) data
             using (var stream = tcpClient.GetStream())
             {
-                Debug.Log($"Opening Stream");
+
                 // read size
                 byte[] sizeBytes = new byte[sizeof(int)];
                 await stream.ReadAsync(sizeBytes, 0, sizeof(int));
                 await stream.FlushAsync();
-                int size = BitConverter.ToInt32(sizeBytes, 0);
-                Debug.Log($"Attempting to download Anchor of size {size}");
+                size = BitConverter.ToInt32(sizeBytes, 0);
+                UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Attempting to download Anchor of size {size}"); }, true);
 
-                // read data
-                Debug.Log("reading...");
-                byte[] buffer = new byte[size];
-                await stream.ReadAsync(buffer, 0, size);
-                await stream.FlushAsync();
-                Debug.Log("finished reading");
+
+                byte[] myReadBuffer = new byte[size];
+                tempByteArray = new byte[size];
+
+                // Incoming message may be larger than the buffer size.
+                do
+                {
+                    if (bufferSize > (size - totalBytes))
+                    {
+                        bufferSize = size - totalBytes;
+                    }
+                    bytesRead = await stream.ReadAsync(myReadBuffer, 0, bufferSize);
+                    Array.Copy(myReadBuffer, 0, tempByteArray, totalBytes, bytesRead);
+                    totalBytes += bytesRead;
+                    counter += 1;
+                    if (counter == 120)
+                    {
+                        progress = (Convert.ToDouble(totalBytes) / Convert.ToDouble(size)) * 100;
+                        UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd " + progress + "% of Spatial Anchor"); }, true);
+                        counter = 0;
+                    }
+
+                } while (totalBytes < size);
 
                 // Send complete confirmation
                 Debug.Log("Sending confirmation");
@@ -212,12 +237,15 @@ public class SocketServer
                 await stream.FlushAsync();
                 Debug.Log("Confirmation sent");
 
-                return buffer;
-
             }
+
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd Spatial Anchor"); }, true);
+
+            return tempByteArray;
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log(e.Message); }, true);
             return null;
         }
     }
