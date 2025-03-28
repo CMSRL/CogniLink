@@ -205,7 +205,7 @@ public class SocketServer
                 await stream.ReadAsync(sizeBytes, 0, sizeof(int));
                 await stream.FlushAsync();
                 size = BitConverter.ToInt32(sizeBytes, 0);
-                UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log($"Attempting to download Anchor of size {size}"); }, true);
+                Debug.Log($"Attempting to download Anchor of size {size}");
 
 
                 byte[] myReadBuffer = new byte[size];
@@ -225,7 +225,7 @@ public class SocketServer
                     if (counter == 120)
                     {
                         progress = (Convert.ToDouble(totalBytes) / Convert.ToDouble(size)) * 100;
-                        UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd " + progress + "% of Spatial Anchor"); }, true);
+                        Debug.Log("Recv'd " + progress + "% of Spatial Anchor");
                         counter = 0;
                     }
 
@@ -239,13 +239,13 @@ public class SocketServer
 
             }
 
-            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log("Recv'd Spatial Anchor"); }, true);
+            Debug.Log("Recv'd Spatial Anchor");
 
             return tempByteArray;
         }
         catch (Exception e)
         {
-            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log(e.Message); }, true);
+            Debug.Log(e.Message);
             return null;
         }
     }
@@ -312,7 +312,7 @@ public class SocketServer
         }
         catch (Exception e)
         {
-            UnityEngine.WSA.Application.InvokeOnAppThread(async () => { Debug.Log(e.Message); }, true);
+            Debug.Log(e.Message);
             return null;
         }
     }
