@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49529ccb93128e44db989cc062f02250, type: 3}
+  m_Name: Desktop
+  m_EditorClassIdentifier: 
+  targetPrefab: {fileID: 1572859605954190471, guid: 30a6b37801ce36f4ba7b5d61caf02407, type: 3}
+  DeviceIPAddresses:
+  - 192.168.1.10
