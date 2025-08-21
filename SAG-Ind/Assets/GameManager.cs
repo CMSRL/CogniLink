@@ -105,11 +105,12 @@ public class GameManager : MonoBehaviour
 
      public string OnShapeClicked(GameObject shape ,  GameObject[] shapes, List<GameObject> allShapes)
     {
-        // if (shape.name.StartsWith(currentTargetShape.name))
-        // {
+        if (shape.name.StartsWith(currentTargetShape.name))
+        {
             
             Debug.Log("Target hit!");
             IncrementScore();
+            AudioManager.Instance.PlayCorrectHitSound();
              foreach (var gridGenerator in gridGenerators)
             {
                 if (gridGenerator != null)
@@ -130,7 +131,13 @@ public class GameManager : MonoBehaviour
             }
 
             return newShapeName;
-        //}
+        }
+        else
+        {
+            Debug.Log("Wrong click");
+             AudioManager.Instance.PlayWrongHitSound();
+             return null;
+        }
     }
 
     // public void SetNewTarget( string thisTarget)
@@ -247,44 +254,56 @@ public class GameManager : MonoBehaviour
     }
 
 
-    public void UpdateVisibility(string thisTarget, bool thisPlayer)
-    {
-       // bool thisPlayer = player;
-        string targetShapeName = thisTarget;
-        foreach (var shape in allShapesGM)
-        {
+    // public void UpdateVisibility(string thisTarget, bool thisPlayer)
+    // {
+    //    // bool thisPlayer = player;
+    //     string targetShapeName = thisTarget;
+    //     Debug.Log("here")
+    //     foreach (var shape in allShapesGM)
+    //     {
                     
-            if (shape != null)
-            {
-                var interactable = shape.GetComponent<StatefulInteractable>();
-                if (interactable != null)
-                {
-                    interactable.enabled = false;
-                    foreach (var renderer in shape.GetComponentsInChildren<Renderer>())
-                    {
-                        renderer.enabled = true;
-                    }
-                }
+    //         if (shape != null)
+    //         {
+    //             var interactable = shape.GetComponent<StatefulInteractable>();
+    //             if (interactable != null)
+    //             {
+    //                 interactable.enabled = true;
+    //                 Debug.Log("interactable enabled");
+    //                 foreach (var renderer in shape.GetComponentsInChildren<Renderer>())
+    //                 {
+    //                     renderer.enabled = true;
+    //                 }
+    //             }
 
-                 if (shape != null && shape.name.StartsWith(targetShapeName) && thisPlayer == true)
-                {
-                    // var interactable = shape.GetComponent<StatefulInteractable>();
-                    if (interactable != null)
-                    {
-                        interactable.enabled = true;
-                    }
+    //              if (shape != null && shape.name.StartsWith(targetShapeName) && thisPlayer == true)
+    //             {
+    //                 // var interactable = shape.GetComponent<StatefulInteractable>();
+    //                 if (interactable != null)
+    //                 {
+    //                     interactable.enabled = true;
+    //                 }
 
-                    foreach (var renderer in shape.GetComponentsInChildren<Renderer>())
-                    {
-                        renderer.enabled = false;
-                    }
-                }
+    //                 foreach (var renderer in shape.GetComponentsInChildren<Renderer>())
+    //                 {
+    //                     renderer.enabled = false;
+    //                 }
+    //             }
+
+    //              if (shape != null)
+    //             {
+    //                 // var interactable = shape.GetComponent<StatefulInteractable>();
+    //                 if (interactable != null)
+    //                 {
+    //                     interactable.enabled = true;
+    //                 }
+
+    //             }
        
                     
                 
-            }
-        }
-    }
+    //         }
+    //     }
+    // }
 
 
     public void SetNewRandomTarget(List<GameObject> allShapes, GameObject[] shapes)
@@ -317,13 +336,13 @@ public class GameManager : MonoBehaviour
             if (shape != null)
             {
                 var interactable = shape.GetComponent<StatefulInteractable>();
-                if (interactable != null)
-                {
-                    interactable.enabled = false;
+                // if (interactable != null)
+                // {
+                //     interactable.enabled = false;
                    
-                }
+                // }
 
-                 if (shape != null && shape.name.StartsWith(currentTargetShape.name))
+                //  if (shape != null && shape.name.StartsWith(currentTargetShape.name))
                 {
                     // var interactable = shape.GetComponent<StatefulInteractable>();
                     if (interactable != null)

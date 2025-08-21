@@ -59,15 +59,15 @@ public class GridGenerator : MonoBehaviour
     public GameObject labelPrefab; // Assign this in the inspector
     public float labelOffset = 0.1f;
 
-    public GameObject randomWordTextPrefab; // Assign a prefab with TextMeshPro in the inspector
-    private TextMeshPro randomWordText;
-    private List<string> randomWords = new List<string> { "Elephant", "Galaxy", "Toaster", "Python", "Quantum", "Rainbow", 
-        "Banana", "Octopus", "Volcano", "Tornado", "Spaceship", "Penguin",
-        "Jellyfish", "Cactus", "Unicorn", "Meteor", "Chocolate", "Castle",
-        "Robot", "Dinosaur", "Bicycle", "Laptop", "Compass", "Pineapple", "Dolphin", "Friend",
-        "Rock", "Star", "North", "South", "East", "West", "Tweleve", "Three" };
+    // public GameObject randomWordTextPrefab; // Assign a prefab with TextMeshPro in the inspector
+    // private TextMeshPro randomWordText;
+    // private List<string> randomWords = new List<string> { "Elephant", "Galaxy", "Toaster", "Python", "Quantum", "Rainbow", 
+    //     "Banana", "Octopus", "Volcano", "Tornado", "Spaceship", "Penguin",
+    //     "Jellyfish", "Cactus", "Unicorn", "Meteor", "Chocolate", "Castle",
+    //     "Robot", "Dinosaur", "Bicycle", "Laptop", "Compass", "Pineapple", "Dolphin", "Friend",
+    //     "Rock", "Star", "North", "South", "East", "West", "Tweleve", "Three" };
 
-    private Coroutine randomWordCoroutine;
+    // private Coroutine randomWordCoroutine;
 
 
     // Gray Cube Implementation
@@ -111,11 +111,11 @@ public class GridGenerator : MonoBehaviour
         //GameManager.Instance.RestartChangeTargetRoutine(allShapes, shapes);
        
 
-        AddRandomWordText();
-        if (randomWordCoroutine == null)
-        {
-            randomWordCoroutine = StartCoroutine(UpdateRandomWord());
-        }
+        // AddRandomWordText();
+        // if (randomWordCoroutine == null)
+        // {
+        //     randomWordCoroutine = StartCoroutine(UpdateRandomWord());
+        // }
 
         CreateGrayCube();
         StartGrayCubeMovement();
@@ -433,38 +433,38 @@ public class GridGenerator : MonoBehaviour
         }
     }
 
-      void AddRandomWordText()
-    {
-        GameObject randomWordTextObject = Instantiate(randomWordTextPrefab, transform);
-        randomWordTextObject.transform.localPosition = new Vector3(6f, 9f, 0); // Adjust to position at the top-left corner of the grid
-        randomWordText = randomWordTextObject.GetComponent<TextMeshPro>();
+    //   void AddRandomWordText()
+    // {
+    //     GameObject randomWordTextObject = Instantiate(randomWordTextPrefab, transform);
+    //     randomWordTextObject.transform.localPosition = new Vector3(6f, 9f, 0); // Adjust to position at the top-left corner of the grid
+    //     randomWordText = randomWordTextObject.GetComponent<TextMeshPro>();
 
-        if (randomWordText != null)
-        {
-            randomWordText.text = "Loading...";
-            randomWordText.fontSize = 5f; // Adjust font size as needed
-            randomWordText.alignment = TextAlignmentOptions.Left;
-        }
-        else
-        {
-            Debug.LogError("TextMeshPro component not found in randomWordTextPrefab");
-        }
-    }
+    //     if (randomWordText != null)
+    //     {
+    //         randomWordText.text = "Loading...";
+    //         randomWordText.fontSize = 5f; // Adjust font size as needed
+    //         randomWordText.alignment = TextAlignmentOptions.Left;
+    //     }
+    //     else
+    //     {
+    //         Debug.LogError("TextMeshPro component not found in randomWordTextPrefab");
+    //     }
+    // }
 
-    IEnumerator UpdateRandomWord()
-    {
-        while (true)
-        {
-            if (randomWordText != null)
-            {
-                string newWord = randomWords[Random.Range(0, randomWords.Count)];
-                randomWordText.text = $"Word: {newWord}";
-                logger.Word = newWord;
+    // IEnumerator UpdateRandomWord()
+    // {
+    //     while (true)
+    //     {
+    //         if (randomWordText != null)
+    //         {
+    //             string newWord = randomWords[Random.Range(0, randomWords.Count)];
+    //             randomWordText.text = $"Word: {newWord}";
+    //             logger.Word = newWord;
 
-            }
-            yield return new WaitForSeconds(20f); // Change word every 20 seconds
-        }
-    }
+    //         }
+    //         yield return new WaitForSeconds(20f); // Change word every 20 seconds
+    //     }
+    // }
 
     // Gray Cube Implementation
 
@@ -497,7 +497,7 @@ public class GridGenerator : MonoBehaviour
             }
 
             Vector3 targetCell = shapePattern[index];
-            Vector3 newPosition = new Vector3((targetCell.x * cellSpacing) + 0.35f , (targetCell.y * cellSpacing) + 0.35f, 0.1f);
+            Vector3 newPosition = new Vector3((targetCell.x * cellSpacing) + 0.35f , (targetCell.y * cellSpacing) + 0.35f, -0.2f);
             logger.GrayBoxPos =  targetCell.x + "," + targetCell.y ;
             
             grayCube.transform.localPosition = newPosition;

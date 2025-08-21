@@ -27,6 +27,7 @@ public class GameManager : MonoBehaviour
     public bool player = false;
     public GameObject playerIndicator;
     private CSVLogger logger;
+    private int wrongClick = 0;
    
       
 
@@ -127,6 +128,7 @@ public class GameManager : MonoBehaviour
             
             Debug.Log("Target hit!");
             //IncrementScore();
+            AudioManager.Instance.PlayCorrectHitSound();
             
 
             string[] nameParts = shape.name.Split('_');
@@ -151,6 +153,15 @@ public class GameManager : MonoBehaviour
 
             GameBoard.Instance.gameBoardChanged++;
             //Destroy(shape);
+        }
+        else 
+        {
+            
+            Debug.Log("Wrong target!");
+            wrongClick++;
+            logger.WrongClick = wrongClick.ToString();
+
+            AudioManager.Instance.PlayWrongHitSound();
         }
     }
 
@@ -220,6 +231,14 @@ public class GameManager : MonoBehaviour
                         renderer.enabled = false;
                     }
                 }
+
+                 if (shape != null && thisPlayer == true)
+                 {
+                        if (interactable != null)
+                        {
+                            interactable.enabled = true;
+                        }
+                 }
 
                 
                 var textPlayerRenderer =  playerIndicator.GetComponent<Renderer>();

@@ -21,7 +21,8 @@ public class CSVLogger : MonoBehaviour
 
     // Backing fields
     private string _score;
-    private string _word;
+    private string _wrongClick;
+    //private string _word;
     private string _grayBoxPos;
     private string _shotLocation;
     private string _role;
@@ -33,6 +34,7 @@ public class CSVLogger : MonoBehaviour
     private Vector3 _eyeGazePos;
     private Vector3 _eyeGazeDir;
     private bool _pauseStatus;
+    
 
 
     // Properties
@@ -42,7 +44,8 @@ public class CSVLogger : MonoBehaviour
     public string DwellDuration { get =>_dwellDuration; set => _dwellDuration = value; }
     public string IsFixation { get => _isFixation; set => _isFixation = value; }
     public string Score { get => _score; set => _score = value; }
-    public string Word { get => _word; set => _word = value; }
+    public string WrongClick { get => _wrongClick; set => _wrongClick = value; }
+    //public string Word { get => _word; set => _word = value; }
     public string Role { get => _role; set => _role = value; }
     public string GrayBoxPos { get => _grayBoxPos; set => _grayBoxPos = value; }
     public string ShotLocation { get => _shotLocation; set => _shotLocation = value; }
@@ -73,7 +76,7 @@ public class CSVLogger : MonoBehaviour
         
         // initiate columns of CSV
         tw = new StreamWriter(GameFilePath, false); // false indicates overwriting the file
-        tw.WriteLine("TimeStamp, Score, Word, Role, Frame#, PauseStatus, HighlightPosRow, HighlightPosCol,  ShotLocationRow, ShotLocationCol, ShotLocationPos" ); // edit this to update coloumns of CSV
+        tw.WriteLine("TimeStamp, Score, WrongClick, Role, Frame#, PauseStatus, HighlightPosRow, HighlightPosCol,  ShotLocationRow, ShotLocationCol, ShotLocationPos" ); // edit this to update coloumns of CSV
         tw.Close();
 
         tw = new StreamWriter(GazeFilePath, false); // false indicates overwriting the file
@@ -104,7 +107,7 @@ public class CSVLogger : MonoBehaviour
         // Debug.Log("Log current row was called");
         // Debug.Log("row val:" + $"{timeStamp:F2},{_score},{_word},{_role},{frame},{_grayBoxPos},{_shotLocation},{_pauseStatus}");
   
-        string row = $"{timeStamp:F2},{_score},{_word},{_role},{frame},{_pauseStatus},{_grayBoxPos}, {_shotLocation}";
+        string row = $"{timeStamp:F2},{_score},{_wrongClick},{_role},{frame},{_pauseStatus},{_grayBoxPos}, {_shotLocation}";
         GameRows.Add(row);
     }
 
