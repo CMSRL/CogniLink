@@ -312,7 +312,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f8780f3cd923a049927667d08c48df2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  recordedDataPath: D:\maha\Project2\SituationalAwarenessGame\recorded_scene.bin
+  recordedDataPath: D:\Project2\SituationalAwarenessGame\recorded_scene.bin
 --- !u!4 &1041598893
 Transform:
   m_ObjectHideFlags: 0

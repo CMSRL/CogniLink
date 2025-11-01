@@ -10,7 +10,7 @@ using TMPro;
 
 public class ReplayManager : MonoBehaviour
 {
-    //public string replayFilePath = @"D:\maha\Project2\SituationalAwarenessGame\recorded_scene.bin";
+    //public string replayFilePath = @"D:\Project2\SituationalAwarenessGame\recorded_scene.bin";
     public string replayFileName = "recorded_scene.bin";
     private string replayFilePath;
     private List<FrameData> replayData;

@@ -297,7 +297,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71a4180ccd05c1a41ae403999155d40d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  replayFilePath: D:\maha\Project2\SituationalAwarenessGame\recorded_scene.bin
+  replayFilePath: D:\Project2\SituationalAwarenessGame\recorded_scene.bin
   isPlaying: 0
 --- !u!1 &1807605124
 GameObject:

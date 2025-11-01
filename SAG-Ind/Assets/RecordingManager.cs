@@ -5,7 +5,7 @@
 // public class RecordingManager : MonoBehaviour
 // {
 //     int recorderId = 1; // Example recorder ID
-//     string directory = "D:/maha/Project2/Recordings";
+//     string directory = "D:/Project2/Recordings";
 //     string recordName = "Session1";
 
 //     public Button startRecordingButton;
